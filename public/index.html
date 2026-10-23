@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ExamAI - AI Exam Preparation Portal</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Core CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Allowed CDN Libraries -->
+  <!-- 1. Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- 2. DOMPurify for HTML sanitization -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+  <!-- 3. PDF.js for client-side PDF text extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- 4. KaTeX for Mathematical & Scientific Equation Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head>
+<body class="app-body">
+
+  <!-- Mobile Sidebar Overlay Backdrop -->
+  <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
+
+  <div class="app-layout">
+    
+    <!-- ==========================================
+         SIDEBAR NAVIGATION
+         ========================================== -->
+    <aside id="appSidebar" class="sidebar">
+      
+      <!-- Sidebar Header / Brand -->
+      <div class="sidebar__header">
+        <div class="sidebar__brand">
+          <svg class="sidebar__logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+            <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+          </svg>
+          <div class="sidebar__brand-text">
+            <span class="sidebar__brand-title">Exam<span>AI</span></span>
+            <span class="sidebar__brand-subtitle">Smart Exam Prep</span>
+          </div>
+        </div>
+        <button id="closeSidebarBtn" class="btn-icon sidebar__close-btn" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Action: New Chat -->
+      <div class="sidebar__action">
+        <button id="newChatBtn" class="btn btn--primary btn--block btn--icon-left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>New Chat Session</span>
+        </button>
+      </div>
+
+      <!-- Exam Countdown Card Widget -->
+      <div class="countdown-widget" id="examCountdownWidget">
+        <div class="countdown-widget__header">
+          <svg class="countdown-widget__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span class="countdown-widget__title" id="countdownExamTitle">Target Exam</span>
+        </div>
+        <div class="countdown-widget__time">
+          <div class="countdown-widget__unit">
+            <span class="countdown-widget__val" id="countdownDays">00</span>
+            <span class="countdown-widget__lbl">Days</span>
+          </div>
+          <span class="countdown-widget__sep">:</span>
+          <div class="countdown-widget__unit">
+            <span class="countdown-widget__val" id="countdownHours">00</span>
+            <span class="countdown-widget__lbl">Hours</span>
+          </div>
+          <span class="countdown-widget__sep">:</span>
+          <div class="countdown-widget__unit">
+            <span class="countdown-widget__val" id="countdownMinutes">00</span>
+            <span class="countdown-widget__lbl">Mins</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Study Tools Navigation Menu -->
+      <div class="sidebar__tools">
+        <span class="sidebar__section-title">Preparation Tools</span>
+        <nav class="sidebar__nav">
+          <button id="openQuizDrawerBtn" class="sidebar__nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            <span>Question Paper Lab</span>
+          </button>
+          <button id="openFlashcardsBtn" class="sidebar__nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+            </svg>
+            <span>Revision Flashcards</span>
+          </button>
+          <button id="openStudyPlanBtn" class="sidebar__nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>Study Plan Generator</span>
+          </button>
+          <button id="openProgressBtn" class="sidebar__nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span>Progress Tracker</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Chat History Section with Search -->
+      <div class="sidebar__history">
+        <div class="sidebar__history-header">
+          <span class="sidebar__section-title">Chat History</span>
+          <span id="historyCountBadge" class="badge">0</span>
+        </div>
+        <div class="sidebar__search">
+          <svg class="sidebar__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="chatSearchInput" placeholder="Search chats..." class="sidebar__search-input">
+        </div>
+        <ul id="chatHistoryList" class="history-list">
+          <!-- Populated dynamically via app.js -->
+        </ul>
+      </div>
+
+      <!-- User Profile & Settings Footer -->
+      <div class="sidebar__footer">
+        <button id="profileSettingsBtn" class="sidebar__user-badge" title="Edit Personalization Profile">
+          <div class="sidebar__user-avatar" id="userAvatarText">S</div>
+          <div class="sidebar__user-info">
+            <span class="sidebar__user-name" id="userDisplayName">Student</span>
+            <span class="sidebar__user-sub" id="userDisplayExam">Exam: General</span>
+          </div>
+          <svg class="sidebar__user-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
+        <button id="logoutBtn" class="btn-icon" title="Log Out" aria-label="Log Out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ==========================================
+         MAIN CONTENT AREA
+         ========================================== -->
+    <main class="main-content">
+      
+      <!-- Top Application Header -->
+      <header class="chat-header">
+        <div class="chat-header__left">
+          <button id="hamburgerBtn" class="btn-icon chat-header__menu-btn" aria-label="Open sidebar menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div class="chat-header__title-container">
+            <h2 id="currentChatTitle" class="chat-header__title">New Session</h2>
+            <span class="chat-header__status-badge">
+              <span class="status-indicator"></span>
+              <span id="modelIndicatorText">Gemini 3 Flash</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="chat-header__right">
+          <!-- Speech Synthesis (Read-Aloud) Toggle -->
+          <button id="readAloudToggleBtn" class="btn-icon" aria-label="Toggle speech read-aloud" title="Toggle AI Voice Read-Aloud">
+            <svg class="icon icon--speaker-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <svg class="icon icon--speaker-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+          </button>
+
+          <!-- Voice Recognition Language Choice -->
+          <div class="language-selector" title="Speech Recognition Language">
+            <select id="voiceLangSelect" class="form-select form-select--sm" aria-label="Voice language">
+              <option value="en-US">EN (US)</option>
+              <option value="en-GB">EN (UK)</option>
+              <option value="en-IN" selected>EN (IN)</option>
+              <option value="hi-IN">हिन्दी (HI)</option>
+              <option value="es-ES">ES</option>
+              <option value="fr-FR">FR</option>
+            </select>
+          </div>
+
+          <!-- Color Theme Toggle -->
+          <button id="themeToggleBtn" class="btn-icon" aria-label="Toggle dark/light theme" title="Toggle Theme">
+            <svg class="icon icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+            </svg>
+            <svg class="icon icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+
+          <!-- Export Chat Notes -->
+          <button id="exportChatBtn" class="btn-icon" aria-label="Export chat session" title="Export Chat Notes (Markdown)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+          </button>
+
+          <!-- Clear Chat Messages -->
+          <button id="clearChatBtn" class="btn-icon" aria-label="Clear chat messages" title="Clear Chat Messages">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Chat Messages Scroll Container -->
+      <div id="messagesContainer" class="chat-messages" tabindex="0">
+        
+        <!-- Welcome Screen (Visible on empty chat) -->
+        <div id="welcomeScreen" class="welcome-screen">
+          <div class="welcome-screen__badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+          </div>
+          <h2 class="welcome-screen__title">What exam topic are we conquering today?</h2>
+          <p class="welcome-screen__subtitle">Ask any concept, upload study notes or diagrams, or generate practice question papers instantly.</p>
+          
+          <!-- Suggestion Chips Grid -->
+          <div class="suggestion-chips">
+            <button class="chip" data-prompt="Explain the difference between mitosis and meiosis with a quick comparison table and 1-mark exam tips.">
+              <span class="chip__icon">💡</span>
+              <span class="chip__label">Explain a topic</span>
+            </button>
+            <button class="chip" data-action="open-quiz">
+              <span class="chip__icon">📝</span>
+              <span class="chip__label">Make a quiz</span>
+            </button>
+            <button class="chip" data-prompt="Revise the key formulas and high-yield concepts of Thermodynamics in 5 minutes for quick revision.">
+              <span class="chip__icon">⚡</span>
+              <span class="chip__label">Revise in 5 minutes</span>
+            </button>
+            <button class="chip" data-action="open-study-plan">
+              <span class="chip__icon">📅</span>
+              <span class="chip__label">Make a study plan</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Message Bubbles rendered here -->
+      </div>
+
+      <!-- Floating Scroll-To-Bottom Button -->
+      <button id="scrollToBottomBtn" class="btn-scroll-bottom" aria-label="Scroll to bottom" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      <!-- ==========================================
+           QUESTION TYPE SELECTOR (DRAWER / PANEL)
+           ========================================== -->
+      <div id="quizSelectorPanel" class="quiz-selector-panel quiz-selector-panel--collapsed">
+        <div class="quiz-selector-panel__header">
+          <div class="quiz-selector-panel__title-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="quiz-selector-panel__icon">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span class="quiz-selector-panel__title">Exam Paper Generator</span>
+          </div>
+          <button id="toggleQuizPanelBtn" class="btn-icon btn-icon--sm" aria-label="Toggle Question Paper Generator">
+            <svg class="icon icon--chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="quiz-selector-panel__body">
+          <!-- Segmented Question Type Controls -->
+          <div class="quiz-ctrl-group">
+            <label class="quiz-ctrl-label">Question Type</label>
+            <div class="segmented-control" id="questionTypeSegmented">
+              <button type="button" class="segmented-control__btn segmented-control__btn--active" data-val="mcq">MCQ</button>
+              <button type="button" class="segmented-control__btn" data-val="one_mark">1-Mark</button>
+              <button type="button" class="segmented-control__btn" data-val="short">Short (2-3M)</button>
+              <button type="button" class="segmented-control__btn" data-val="long">Long (5+M)</button>
+              <button type="button" class="segmented-control__btn" data-val="mixed">Mixed Paper</button>
+            </div>
+          </div>
+
+          <!-- Controls Row: Count, Difficulty, Explanations -->
+          <div class="quiz-ctrl-row">
+            <div class="quiz-ctrl-group">
+              <label for="quizCountSelect" class="quiz-ctrl-label">Questions</label>
+              <select id="quizCountSelect" class="form-select">
+                <option value="5" selected>5 Questions</option>
+                <option value="10">10 Questions</option>
+                <option value="15">15 Questions</option>
+                <option value="20">20 Questions</option>
+              </select>
+            </div>
+
+            <div class="quiz-ctrl-group">
+              <label for="quizDifficultySelect" class="quiz-ctrl-label">Difficulty</label>
+              <select id="quizDifficultySelect" class="form-select">
+                <option value="Easy">Easy</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+
+            <div class="quiz-ctrl-group quiz-ctrl-group--checkbox">
+              <label class="custom-toggle">
+                <input type="checkbox" id="quizExplanationsToggle" checked>
+                <span class="custom-toggle__slider"></span>
+                <span class="custom-toggle__label">Include Explanations</span>
+              </label>
+            </div>
+
+            <div class="quiz-ctrl-group quiz-ctrl-group--action">
+              <button id="generatePaperBtn" class="btn btn--primary btn--icon-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <span>Generate Test</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           CHAT INPUT BAR
+           ========================================== -->
+      <footer class="chat-input-bar">
+        
+        <!-- Removable File Preview Chip Container -->
+        <div id="filePreviewContainer" class="file-chip-container" style="display:none;">
+          <div class="file-chip">
+            <svg class="file-chip__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+              <polyline points="13 2 13 9 20 9"/>
+            </svg>
+            <div class="file-chip__details">
+              <span id="fileChipName" class="file-chip__name">filename.pdf</span>
+              <span id="fileChipInfo" class="file-chip__info">PDF • 1.2 MB</span>
+            </div>
+            <button type="button" id="removeFileBtn" class="file-chip__remove" aria-label="Remove attached file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Input Wrapper Box -->
+        <div class="chat-input-box">
+          
+          <!-- Hidden File Input for PDF, Images, TXT -->
+          <input type="file" id="fileAttachmentInput" accept=".pdf,image/png,image/jpeg,image/webp,text/plain" style="display:none;">
+          
+          <!-- Attach File Button -->
+          <button type="button" id="attachFileBtn" class="btn-icon" aria-label="Attach notes, PDF or diagram" title="Attach file (PDF, Image, TXT max 5MB)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
+
+          <!-- Auto-Growing Textarea -->
+          <textarea
+            id="chatTextarea"
+            class="chat-textarea"
+            placeholder="Ask a question or enter a topic for paper generation... (Shift+Enter for new line)"
+            rows="1"
+            aria-label="Message ExamAI"
+          ></textarea>
+
+          <!-- Voice Input Mic Button -->
+          <button type="button" id="voiceMicBtn" class="btn-icon voice-mic-btn" aria-label="Voice input" title="Voice Input (Speech-to-Text)">
+            <svg class="voice-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <span class="mic-pulse-ring"></span>
+          </button>
+
+          <!-- Send Message Button -->
+          <button type="button" id="sendMessageBtn" class="btn-send" aria-label="Send message" title="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="chat-input-caption">
+          <span>ExamAI can analyze study material and formulate exam papers. Press Enter to send, Shift+Enter for newline.</span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- ==========================================
+       MODAL 1: PERSONALIZATION PROFILE
+       ========================================== -->
+  <div id="profileModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-labelledby="profileModalTitle">
+      <div class="modal-card__header">
+        <div class="modal-card__title-group">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-card__icon">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <div>
+            <h3 id="profileModalTitle" class="modal-card__title">Exam Personalization</h3>
+            <p class="modal-card__subtitle">ExamAI adapts all answers, question papers, and grading to your syllabus.</p>
+          </div>
+        </div>
+        <button id="closeProfileModalBtn" class="btn-icon" aria-label="Close dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <form id="profileForm" class="modal-card__body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="profileName" class="form-label">Student Name</label>
+            <input type="text" id="profileName" class="form-input" placeholder="e.g. Alex" maxlength="100">
+          </div>
+          <div class="form-group">
+            <label for="profileGrade" class="form-label">Class / Academic Year</label>
+            <input type="text" id="profileGrade" class="form-input" placeholder="e.g. 10th Grade / Undergraduate Year 1" maxlength="100">
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="profileExam" class="form-label">Target Exam</label>
+            <input type="text" id="profileExam" class="form-input" placeholder="e.g. CBSE Board, SAT, JEE, GCSE, AP Biology" maxlength="100">
+          </div>
+          <div class="form-group">
+            <label for="profileExamDate" class="form-label">Exam Date</label>
+            <input type="date" id="profileExamDate" class="form-input">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="profileSubjects" class="form-label">Subjects Enrolled</label>
+          <input type="text" id="profileSubjects" class="form-input" placeholder="e.g. Physics, Chemistry, Mathematics, English" maxlength="150">
+        </div>
+
+        <div class="form-group">
+          <label for="profileWeakTopics" class="form-label">Priority / Weak Topics (AI will focus on these)</label>
+          <input type="text" id="profileWeakTopics" class="form-input" placeholder="e.g. Rotational Mechanics, Organic Reaction Mechanisms" maxlength="150">
+        </div>
+
+        <div class="form-group">
+          <label for="profileAnswerStyle" class="form-label">Preferred Answer Style</label>
+          <select id="profileAnswerStyle" class="form-select">
+            <option value="Point-wise with marking rubrics">Point-wise with marking rubrics (Recommended)</option>
+            <option value="Detailed comprehensive explanations">Detailed comprehensive explanations</option>
+            <option value="Concise high-yield revision summaries">Concise high-yield revision summaries</option>
+            <option value="First-principles conceptual derivation">First-principles conceptual derivation</option>
+          </select>
+        </div>
+
+        <div class="modal-card__footer">
+          <button type="button" id="cancelProfileBtn" class="btn btn--outline">Cancel</button>
+          <button type="submit" class="btn btn--primary">Save Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 2: INTERACTIVE QUIZ & EXAM PAPER MODAL
+       ========================================== -->
+  <div id="quizModal" class="modal-backdrop modal-backdrop--fullscreen" aria-hidden="true">
+    <div class="quiz-container">
+      
+      <!-- Quiz Navigation Header -->
+      <div class="quiz-container__header">
+        <div class="quiz-container__title-col">
+          <span class="quiz-container__badge" id="quizHeaderBadge">Section A • Practice Quiz</span>
+          <h2 class="quiz-container__title" id="quizHeaderTitle">Examination Paper</h2>
+        </div>
+
+        <div class="quiz-container__actions">
+          <!-- Copy Paper as Plain Text -->
+          <button id="copyQuizTextBtn" class="btn btn--outline btn--sm btn--icon-left" title="Copy Question Paper as Text">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span>Copy Text</span>
+          </button>
+          
+          <!-- Print Paper Button -->
+          <button id="printQuizBtn" class="btn btn--outline btn--sm btn--icon-left" title="Print Exam Paper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            <span>Print Paper</span>
+          </button>
+
+          <!-- Close Quiz Modal -->
+          <button id="closeQuizModalBtn" class="btn-icon" aria-label="Close quiz">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quiz Body / Paper Layout -->
+      <div class="quiz-container__body" id="quizBody">
+        <!-- Rendered dynamically by quiz.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 3: FLASHCARDS
+       ========================================== -->
+  <div id="flashcardsModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card modal-card--lg">
+      <div class="modal-card__header">
+        <div class="modal-card__title-group">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-card__icon">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          </svg>
+          <div>
+            <h3 class="modal-card__title">High-Yield Flashcards</h3>
+            <p class="modal-card__subtitle">Flip cards to test active recall before the exam.</p>
+          </div>
+        </div>
+        <button id="closeFlashcardsBtn" class="btn-icon" aria-label="Close flashcards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-card__body">
+        <!-- AI Flashcard Generator Bar -->
+        <div class="flashcard-generator-bar">
+          <input type="text" id="flashcardTopicInput" class="form-input form-input--sm" placeholder="Topic for AI flashcards (e.g. Photosynthesis, Newton Laws)...">
+          <button type="button" id="generateFlashcardsBtn" class="btn btn--primary btn--sm btn--icon-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            <span>Generate Cards</span>
+          </button>
+        </div>
+
+        <!-- Spaced Repetition Stats Bar -->
+        <div class="sr-stats-bar">
+          <div class="sr-stat-item">
+            <span class="sr-stat-val" id="srTotalCards">0</span>
+            <span class="sr-stat-lbl">Total Deck</span>
+          </div>
+          <div class="sr-stat-item">
+            <span class="sr-stat-val" id="srDueToday" style="color:var(--color-danger);">0</span>
+            <span class="sr-stat-lbl">Due for Review</span>
+          </div>
+          <div class="sr-stat-item">
+            <span class="sr-stat-val" id="srMastered" style="color:var(--color-success);">0</span>
+            <span class="sr-stat-lbl">Mastered (EF ≥ 2.5)</span>
+          </div>
+        </div>
+
+        <!-- 3D Flippable Flashcard -->
+        <div class="flashcard-scene">
+          <div class="flashcard" id="activeFlashcard">
+            <div class="flashcard__face flashcard__face--front">
+              <span class="flashcard__tag">Question / Concept</span>
+              <p class="flashcard__text" id="flashcardFrontText">Loading flashcard...</p>
+              <span class="flashcard__hint">Click anywhere on card to flip</span>
+            </div>
+            <div class="flashcard__face flashcard__face--back">
+              <span class="flashcard__tag">Answer / Model Definition</span>
+              <p class="flashcard__text" id="flashcardBackText">Model answer text</p>
+              <span class="flashcard__hint">Click anywhere on card to flip back</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SuperMemo SM-2 Rating Buttons -->
+        <div class="sm2-rating-group" id="sm2RatingGroup">
+          <span class="sm2-rating-title">How well did you recall this? (SM-2 Spaced Repetition)</span>
+          <div class="sm2-rating-buttons">
+            <button type="button" class="btn-sm2 btn-sm2--again" data-quality="0">
+              <span class="btn-sm2__label">Again</span>
+              <span class="btn-sm2__sub">1 day</span>
+            </button>
+            <button type="button" class="btn-sm2 btn-sm2--hard" data-quality="3">
+              <span class="btn-sm2__label">Hard</span>
+              <span class="btn-sm2__sub">2 days</span>
+            </button>
+            <button type="button" class="btn-sm2 btn-sm2--good" data-quality="4">
+              <span class="btn-sm2__label">Good</span>
+              <span class="btn-sm2__sub">4 days</span>
+            </button>
+            <button type="button" class="btn-sm2 btn-sm2--easy" data-quality="5">
+              <span class="btn-sm2__label">Easy</span>
+              <span class="btn-sm2__sub">7 days</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Previous / Next Navigation Controls -->
+        <div class="flashcard-controls">
+          <button id="prevFlashcardBtn" class="btn btn--outline btn--sm">Previous</button>
+          <span class="flashcard-counter" id="flashcardCounter">Card 1 / 5</span>
+          <button id="nextFlashcardBtn" class="btn btn--primary btn--sm">Next Card</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 4: STUDY PLAN GENERATOR
+       ========================================== -->
+  <div id="studyPlanModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card modal-card--lg">
+      <div class="modal-card__header">
+        <div class="modal-card__title-group">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-card__icon">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <div>
+            <h3 class="modal-card__title">AI Revision Study Plan</h3>
+            <p class="modal-card__subtitle">Generates a day-by-day revision schedule with spaced repetition.</p>
+          </div>
+        </div>
+        <button id="closeStudyPlanBtn" class="btn-icon" aria-label="Close study plan">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-card__body">
+        <form id="studyPlanForm" class="study-plan-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="planDaysLeft" class="form-label">Days Until Exam</label>
+              <input type="number" id="planDaysLeft" class="form-input" min="1" max="180" value="14" required>
+            </div>
+            <div class="form-group">
+              <label for="planHoursPerDay" class="form-label">Study Hours Available / Day</label>
+              <input type="number" id="planHoursPerDay" class="form-input" min="1" max="16" value="3" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="planTopics" class="form-label">Key Subjects & Difficult Topics</label>
+            <input type="text" id="planTopics" class="form-input" placeholder="e.g. Calculus Integration, Optics, Electrostatics" required>
+          </div>
+          <button type="submit" id="generatePlanBtn" class="btn btn--primary btn--block">
+            <span>Create AI Revision Schedule</span>
+          </button>
+        </form>
+
+        <div id="studyPlanResult" class="study-plan-result" style="display:none;">
+          <h4 class="study-plan-result__title">Your Personalized Revision Timetable</h4>
+          <div id="studyPlanMarkdown" class="study-plan-result__content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL 5: PROGRESS TRACKER
+       ========================================== -->
+  <div id="progressModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card modal-card--lg">
+      <div class="modal-card__header">
+        <div class="modal-card__title-group">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-card__icon">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+          <div>
+            <h3 class="modal-card__title">Exam Readiness & Performance</h3>
+            <p class="modal-card__subtitle">Track your accuracy and scores across different question formats.</p>
+          </div>
+        </div>
+        <button id="closeProgressBtn" class="btn-icon" aria-label="Close progress modal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-card__body">
+        <!-- Stat Cards Row -->
+        <div class="stat-cards-grid">
+          <div class="stat-card">
+            <span class="stat-card__val" id="statTotalTests">0</span>
+            <span class="stat-card__lbl">Quizzes Taken</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card__val" id="statQuestionsPracticed">0</span>
+            <span class="stat-card__lbl">Questions Solved</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-card__val" id="statAvgAccuracy">0%</span>
+            <span class="stat-card__lbl">Average Accuracy</span>
+          </div>
+        </div>
+
+        <!-- Plain Canvas Progress Chart -->
+        <div class="chart-container">
+          <h4 class="chart-container__title">Accuracy By Question Format</h4>
+          <canvas id="progressCanvas" width="560" height="240" class="progress-canvas"></canvas>
+        </div>
+
+        <!-- Scores Breakdown Per Type -->
+        <div class="progress-breakdown">
+          <div class="progress-bar-group">
+            <div class="progress-bar-group__label">
+              <span>MCQ Accuracy</span>
+              <span id="progMcqPct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progMcqBar" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="progress-bar-group">
+            <div class="progress-bar-group__label">
+              <span>1-Mark Concept Recall</span>
+              <span id="progOneMarkPct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progOneMarkBar" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="progress-bar-group">
+            <div class="progress-bar-group__label">
+              <span>Short Answer (2-3M)</span>
+              <span id="progShortPct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progShortBar" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="progress-bar-group">
+            <div class="progress-bar-group__label">
+              <span>Long Answer Evaluated (5M)</span>
+              <span id="progLongPct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="progLongBar" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       TOAST NOTIFICATION CONTAINER
+       ========================================== -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- ==========================================
+       SCRIPTS (Loaded in exact logical order)
+       ========================================== -->
+  <script src="auth.js"></script>
+  <script src="quiz.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
