@@ -9,10 +9,7 @@
 // ==========================================
 // If opened via VS Code Live Server (e.g. port 5500, 5501) or file://,
 // route API calls to the Express backend on http://localhost:3000
-const API_BASE = (window.location.port !== '3000' && window.location.protocol.startsWith('http'))
-  ? 'http://localhost:3000'
-  : '';
-
+const API_BASE = '';
 /**
  * Safely parses JSON from a response, with helpful diagnostic error messages.
  */
