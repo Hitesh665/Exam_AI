@@ -7,11 +7,7 @@
 // ==========================================
 // API Base URL Detection
 // ==========================================
-// If opened via VS Code Live Server (e.g. port 5500, 5501) or file://,
-// route API calls to the Express backend on http://localhost:3000
-const API_BASE = (window.location.port !== '3000' && window.location.protocol.startsWith('http'))
-  ? 'http://localhost:3000'
-  : '';
+const API_BASE = '';
 
 /**
  * Safely parses JSON from a response, with helpful diagnostic error messages.
@@ -21,13 +17,10 @@ async function parseJsonResponse(response) {
   try {
     return JSON.parse(text);
   } catch (err) {
-    if (window.location.port !== '3000') {
-      throw new Error(
-        'Cannot reach the Node.js backend! You opened this page via VS Code Live Server (port ' +
-        window.location.port + '). Please run "npm start" in terminal and open http://localhost:3000 instead.'
-      );
+    if (response.status === 502 || response.status === 503 || response.status === 504) {
+      throw new Error('Server is waking up from sleep (Render free tier takes ~30-45s). Please wait 10 seconds and try again.');
     }
-    throw new Error('Server returned invalid response (Status ' + response.status + '). Check that the server is running.');
+    throw new Error('Server returned invalid response (Status ' + response.status + '). Please try again in a few moments.');
   }
 }
 const STORAGE_KEYS = {
@@ -102,10 +95,7 @@ async function authFetch(url, options = {}) {
   try {
     response = await fetch(targetUrl, { ...options, headers });
   } catch (netErr) {
-    if (window.location.port !== '3000') {
-      throw new Error('Cannot connect to Node.js backend. Start it with "npm start" and open http://localhost:3000.');
-    }
-    throw netErr;
+    throw new Error('Cannot reach the server. Please check your internet connection or wait a moment for the server to wake up.');
   }
 
   // Handle session expiration
@@ -300,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           } catch (netErr) {
             throw new Error(
-              'Cannot reach the Node.js backend server! Please start the server using "npm start" (or start.bat) and open http://localhost:3000 (do not use VS Code Live Server on port 5501).'
+              'Cannot connect to the server. If the server is on Render free tier, it may be waking up from sleep (~30-40s). Please wait a moment and try again.'
             );
           }
 
@@ -366,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           } catch (netErr) {
             throw new Error(
-              'Cannot reach the Node.js backend server! Please start the server using "npm start" (or start.bat) and open http://localhost:3000.'
+              'Cannot connect to the server. If the server is on Render free tier, it may be waking up from sleep (~30-40s). Please wait a moment and try again.'
             );
           }
 

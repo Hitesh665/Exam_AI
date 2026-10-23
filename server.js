@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 import { GoogleGenAI } from '@google/genai';
 
 // Load environment variables from .env
@@ -63,8 +64,40 @@ const authLimiter = rateLimit({
 });
 
 // ==========================================
-// Local Database Helper (users.json)
+// Database Setup: MongoDB Atlas + Local JSON Fallback
 // ==========================================
+let isMongoConnected = false;
+
+// Mongoose User Schema
+const userSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const MongoUser = mongoose.models.User || mongoose.model('User', userSchema);
+
+// Connect to MongoDB Atlas if MONGODB_URI is provided
+async function initDatabase() {
+  const mongoUri = process.env.MONGODB_URI;
+  if (mongoUri && mongoUri.trim()) {
+    try {
+      await mongoose.connect(mongoUri.trim(), { serverSelectionTimeoutMS: 5000 });
+      isMongoConnected = true;
+      console.log('✅ Connected to MongoDB Atlas Cloud Database');
+    } catch (err) {
+      console.warn('⚠️ MongoDB Atlas connection error. Falling back to local users.json:', err.message);
+      isMongoConnected = false;
+    }
+  } else {
+    console.log('ℹ️ MONGODB_URI not found in environment. Using local users.json storage.');
+    isMongoConnected = false;
+  }
+}
+
+// Helper: read local users.json fallback
 async function readUsers() {
   try {
     const data = await fs.readFile(USERS_FILE, 'utf-8');
@@ -79,9 +112,51 @@ async function readUsers() {
   }
 }
 
+// Helper: write local users.json fallback
 async function writeUsers(users) {
   await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
 }
+
+// Unified Database Functions (Seamless MongoDB / JSON switching)
+async function findUserByEmail(email) {
+  const cleanEmail = email.trim().toLowerCase();
+  if (isMongoConnected) {
+    return await MongoUser.findOne({ email: cleanEmail });
+  } else {
+    const users = await readUsers();
+    return users.find((u) => u.email.toLowerCase() === cleanEmail) || null;
+  }
+}
+
+async function createUser({ name, email, password }) {
+  const cleanEmail = email.trim().toLowerCase();
+  const id = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+  if (isMongoConnected) {
+    const userDoc = new MongoUser({
+      id,
+      name: name.trim().slice(0, 100),
+      email: cleanEmail,
+      password
+    });
+    await userDoc.save();
+    return { id: userDoc.id, name: userDoc.name, email: userDoc.email };
+  } else {
+    const users = await readUsers();
+    const newUser = {
+      id,
+      name: name.trim().slice(0, 100),
+      email: cleanEmail,
+      password,
+      createdAt: new Date().toISOString()
+    };
+    users.push(newUser);
+    await writeUsers(users);
+    return { id: newUser.id, name: newUser.name, email: newUser.email };
+  }
+}
+
+// Initialize database connection
+initDatabase();
 
 // ==========================================
 // Authentication Middleware
@@ -176,25 +251,18 @@ app.post('/api/signup', authLimiter, async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const users = await readUsers();
-
-    const existingUser = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    const existingUser = await findUserByEmail(cleanEmail);
     if (existingUser) {
-      return res.status(409).json({ error: 'An account with this email already exists.' });
+      return res.status(409).json({ error: 'An account with this email already exists. Please sign in instead.' });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
-      id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-      name: name.trim().slice(0, 100),
+    const newUser = await createUser({
+      name: name.trim(),
       email: cleanEmail,
-      password: hashedPassword,
-      createdAt: new Date().toISOString()
-    };
-
-    users.push(newUser);
-    await writeUsers(users);
+      password: hashedPassword
+    });
 
     // Issue JWT token
     const token = jwt.sign(
@@ -224,16 +292,15 @@ app.post('/api/login', authLimiter, async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const users = await readUsers();
-    const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    const user = await findUserByEmail(cleanEmail);
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({ error: 'Invalid email or password. Please check your credentials or create an account first.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+      return res.status(401).json({ error: 'Invalid email or password. Please check your credentials or create an account first.' });
     }
 
     // Issue JWT token
@@ -252,6 +319,15 @@ app.post('/api/login', authLimiter, async (req, res) => {
     console.error('Login error:', err);
     return res.status(500).json({ error: 'Internal server error during login.' });
   }
+});
+
+// GET /api/health (Server & Database Health status)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    database: isMongoConnected ? 'mongodb_atlas' : 'local_file',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // GET /api/me (Verify active session)
