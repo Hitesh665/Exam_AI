@@ -183,10 +183,21 @@ function authenticateToken(req, res, next) {
 // ==========================================
 function getGeminiClient() {
   dotenv.config(); // Reload .env dynamically so key updates work immediately
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'your_gemini_api_key_here') {
+  let apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || typeof apiKey !== 'string') {
     return null;
   }
+  apiKey = apiKey.trim();
+  if (apiKey === '' || apiKey === 'your_gemini_api_key_here' || apiKey === 'your_new_key_here') {
+    return null;
+  }
+  // Strip surrounding quotes if user copied them
+  apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
+  // Strip GEMINI_API_KEY= prefix if accidentally pasted in Value box
+  if (apiKey.includes('GEMINI_API_KEY=')) {
+    apiKey = apiKey.split('GEMINI_API_KEY=')[1].trim().replace(/^["']|["']$/g, '');
+  }
+  if (!apiKey) return null;
   return new GoogleGenAI({ apiKey });
 }
 
@@ -323,9 +334,13 @@ app.post('/api/login', authLimiter, async (req, res) => {
 
 // GET /api/health (Server & Database Health status)
 app.get('/api/health', (req, res) => {
+  const key = (process.env.GEMINI_API_KEY || '').trim();
   res.json({
     status: 'ok',
     database: isMongoConnected ? 'mongodb_atlas' : 'local_file',
+    keyConfigured: Boolean(key),
+    keyPrefix: key ? key.slice(0, 6) + '...' : 'NONE',
+    keyLength: key ? key.length : 0,
     timestamp: new Date().toISOString()
   });
 });
@@ -486,6 +501,12 @@ Ensure all questions are academically accurate, syllabus-relevant, and formatted
               isRateLimit: true
             });
           }
+          if (err.status === 403 || err.message?.includes('leaked') || err.message?.includes('PERMISSION_DENIED') || err.message?.includes('API_KEY_INVALID')) {
+            return res.status(403).json({
+              error: 'Your Google Gemini API key was reported as leaked or deactivated. Please generate a new key in Google AI Studio and update GEMINI_API_KEY.',
+              isKeyInvalid: true
+            });
+          }
           return res.status(500).json({
             error: 'Failed to generate quiz in the requested format. Please try again.',
             details: err.message
@@ -532,6 +553,12 @@ Make them academically precise, high-yield for exams, and formatted strictly to 
         return res.status(429).json({
           error: 'Rate limit reached on Google Gemini. Please wait a moment before trying again.',
           isRateLimit: true
+        });
+      }
+      if (err.status === 403 || err.message?.includes('leaked') || err.message?.includes('PERMISSION_DENIED') || err.message?.includes('API_KEY_INVALID')) {
+        return res.status(403).json({
+          error: 'Your Google Gemini API key was reported as leaked or deactivated. Please generate a new key in Google AI Studio and update GEMINI_API_KEY.',
+          isKeyInvalid: true
         });
       }
       return res.status(500).json({
@@ -612,6 +639,28 @@ Make them academically precise, high-yield for exams, and formatted strictly to 
         });
       } else {
         res.write('\n\n[Rate limit reached on Gemini API. Please wait a moment and retry.]');
+        return res.end();
+      }
+    }
+
+    // Handle Invalid, Leaked, or Deactivated API Key cleanly
+    if (
+      err.status === 403 ||
+      err.code === 400 ||
+      err.code === 403 ||
+      err.message?.includes('leaked') ||
+      err.message?.includes('PERMISSION_DENIED') ||
+      err.message?.includes('API_KEY_INVALID') ||
+      err.message?.includes('API key not valid')
+    ) {
+      const keyErrMsg = 'Your Google Gemini API key is invalid or leaked. Please create a fresh key at aistudio.google.com and update GEMINI_API_KEY in your Render dashboard.';
+      if (!res.headersSent) {
+        return res.status(400).json({
+          error: keyErrMsg,
+          isKeyInvalid: true
+        });
+      } else {
+        res.write(`\n\n[⚠️ ${keyErrMsg}]`);
         return res.end();
       }
     }
@@ -707,6 +756,12 @@ Output strictly following the JSON schema.`;
       return res.status(429).json({
         error: 'Gemini rate limit reached during evaluation. Please wait a moment and retry.',
         isRateLimit: true
+      });
+    }
+    if (err.status === 403 || err.message?.includes('leaked') || err.message?.includes('PERMISSION_DENIED') || err.message?.includes('API_KEY_INVALID')) {
+      return res.status(403).json({
+        error: 'Your Google Gemini API key was reported as leaked or deactivated. Please generate a new key in Google AI Studio and update GEMINI_API_KEY.',
+        isKeyInvalid: true
       });
     }
     return res.status(500).json({

@@ -487,8 +487,8 @@ async function sendChatMessage(customPrompt = null) {
         showRetryDialog('Google Gemini rate limit reached. Please wait a moment and click retry.', () => sendChatMessage(text));
         return;
       }
-      if (errData.isKeyMissing) {
-        bubbleTextContainer.innerHTML = `<span style="color:var(--color-danger);">${escapeHtml(errData.error)}</span>`;
+      if (errData.isKeyMissing || errData.isKeyInvalid) {
+        bubbleTextContainer.innerHTML = `<span style="color:var(--color-danger); line-height:1.5; display:inline-block;">⚠️ <strong>Gemini API Key Notice:</strong><br>${escapeHtml(errData.error)}</span>`;
         return;
       }
       throw new Error(errData.error || 'Failed to generate response');
